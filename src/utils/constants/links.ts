@@ -9,13 +9,10 @@ export const WEB_LINKS = {
   // Github 主页
   GITHUB_HOME: 'https://github.com/Daymychen/art-design-pro',
 
-  // 项目 Github 主页
-  GITHUB: 'https://github.com/Daymychen/art-design-pro',
-
   // 个人博客
   BLOG: 'https://www.artd.pro',
 
-  // 项目文档
+  // 官方文档
   DOCS: 'https://www.artd.pro/docs/zh/',
 
   // 精简版本

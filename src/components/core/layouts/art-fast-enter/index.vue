@@ -43,27 +43,13 @@
           </div>
         </div>
       </div>
-
-      <div class="border-l-d pl-6 pt-2">
-        <h3 class="mb-2.5 text-base font-medium text-g-800">快速链接</h3>
-        <ul>
-          <li
-            v-for="quickLink in enabledQuickLinks"
-            :key="quickLink.name"
-            class="c-p py-2 hover:[&_span]:text-theme"
-            @click="handleQuickLinkClick(quickLink)"
-          >
-            <span class="text-g-600 no-underline">{{ quickLink.name }}</span>
-          </li>
-        </ul>
-      </div>
     </div>
   </ElPopover>
 </template>
 
 <script setup lang="ts">
   import { useFastEnter } from '@/hooks/core/useFastEnter'
-  import type { FastEnterApplication, FastEnterQuickLink } from '@/types/config'
+  import type { FastEnterApplication } from '@/types/config'
 
   defineOptions({ name: 'ArtFastEnter' })
 
@@ -71,7 +57,7 @@
   const popoverRef = ref()
 
   // 使用快速入口配置
-  const { enabledApplications, enabledQuickLinks } = useFastEnter()
+  const { enabledApplications } = useFastEnter()
 
   /**
    * 处理导航跳转
@@ -101,13 +87,5 @@
    */
   const handleApplicationClick = (application: FastEnterApplication): void => {
     handleNavigate(application.routeName, application.link)
-  }
-
-  /**
-   * 处理快速链接点击
-   * @param quickLink 快速链接配置对象
-   */
-  const handleQuickLinkClick = (quickLink: FastEnterQuickLink): void => {
-    handleNavigate(quickLink.routeName, quickLink.link)
   }
 </script>

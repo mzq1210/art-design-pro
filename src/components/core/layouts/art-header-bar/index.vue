@@ -61,23 +61,6 @@
       </div>
 
       <div class="flex-c gap-2.5">
-        <!-- 搜索 -->
-        <div
-          v-if="shouldShowGlobalSearch"
-          class="flex-cb w-40 h-9 px-2.5 c-p border border-g-400 rounded-custom-sm max-md:!hidden"
-          @click="openSearchDialog"
-        >
-          <div class="flex-c">
-            <ArtSvgIcon icon="ri:search-line" class="text-sm text-g-500" />
-            <span class="ml-1 text-xs font-normal text-g-500">{{ $t('topBar.search.title') }}</span>
-          </div>
-          <div class="flex-c h-5 px-1.5 text-g-500/80 border border-g-400 rounded">
-            <ArtSvgIcon v-if="isWindows" icon="vaadin:ctrl-a" class="text-sm" />
-            <ArtSvgIcon v-else icon="ri:command-fill" class="text-xs" />
-            <span class="ml-0.5 text-xs">k</span>
-          </div>
-        </div>
-
         <!-- 全屏按钮 -->
         <ArtIconButton
           v-if="shouldShowFullscreen"
@@ -87,28 +70,6 @@
           @click="toggleFullScreen"
         />
 
-        <!-- 国际化按钮 -->
-        <ElDropdown
-          @command="changeLanguage"
-          popper-class="langDropDownStyle"
-          v-if="shouldShowLanguage"
-        >
-          <ArtIconButton icon="ri:translate-2" class="language-btn text-[19px]" />
-          <template #dropdown>
-            <ElDropdownMenu>
-              <div v-for="item in languageOptions" :key="item.value" class="lang-btn-item">
-                <ElDropdownItem
-                  :command="item.value"
-                  :class="{ 'is-selected': locale === item.value }"
-                >
-                  <span class="menu-txt">{{ item.label }}</span>
-                  <ArtSvgIcon icon="ri:check-fill" v-if="locale === item.value" />
-                </ElDropdownItem>
-              </div>
-            </ElDropdownMenu>
-          </template>
-        </ElDropdown>
-
         <!-- 通知按钮 -->
         <ArtIconButton
           v-if="shouldShowNotification"
@@ -117,16 +78,6 @@
           @click="visibleNotice"
         >
           <div class="absolute top-2 right-2 size-1.5 !bg-danger rounded-full"></div>
-        </ArtIconButton>
-
-        <!-- 聊天按钮 -->
-        <ArtIconButton
-          v-if="shouldShowChat"
-          icon="ri:message-3-line"
-          class="chat-button relative"
-          @click="openChat"
-        >
-          <div class="breathing-dot absolute top-2 right-2 size-1.5 !bg-success rounded-full"></div>
         </ArtIconButton>
 
         <!-- 设置按钮 -->
@@ -172,12 +123,11 @@
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { useFullscreen, useWindowSize } from '@vueuse/core'
-  import { LanguageEnum, MenuTypeEnum } from '@/enums/appEnum'
+  import { MenuTypeEnum } from '@/enums/appEnum'
   import { useSettingStore } from '@/store/modules/setting'
   import { useUserStore } from '@/store/modules/user'
   import { useMenuStore } from '@/store/modules/menu'
   import AppConfig from '@/config'
-  import { languageOptions } from '@/locales'
   import { mittBus } from '@/utils/sys'
   import { themeAnimation } from '@/utils/ui/animation'
   import { useCommon } from '@/hooks/core/useCommon'
@@ -185,9 +135,6 @@
   import ArtUserMenu from './widget/ArtUserMenu.vue'
 
   defineOptions({ name: 'ArtHeaderBar' })
-
-  // 检测操作系统类型
-  const isWindows = navigator.userAgent.includes('Windows')
 
   const router = useRouter()
   const { locale } = useI18n()
@@ -203,11 +150,8 @@
     shouldShowRefreshButton,
     shouldShowFastEnter,
     shouldShowBreadcrumb,
-    shouldShowGlobalSearch,
     shouldShowFullscreen,
     shouldShowNotification,
-    shouldShowChat,
-    shouldShowLanguage,
     shouldShowSettings,
     shouldShowThemeToggle,
     fastEnterMinWidth: headerBarFastEnterMinWidth
@@ -281,17 +225,6 @@
   }
 
   /**
-   * 切换系统语言
-   * @param {LanguageEnum} lang - 目标语言类型
-   */
-  const changeLanguage = (lang: LanguageEnum): void => {
-    if (locale.value === lang) return
-    locale.value = lang
-    userStore.setLanguage(lang)
-    reload(50)
-  }
-
-  /**
    * 打开设置面板
    */
   const openSetting = (): void => {
@@ -301,13 +234,6 @@
     if (showSettingGuide.value) {
       settingStore.hideSettingGuide()
     }
-  }
-
-  /**
-   * 打开全局搜索对话框
-   */
-  const openSearchDialog = (): void => {
-    mittBus.emit('openSearchDialog')
   }
 
   /**
@@ -333,13 +259,6 @@
    */
   const visibleNotice = (): void => {
     showNotice.value = !showNotice.value
-  }
-
-  /**
-   * 打开聊天窗口
-   */
-  const openChat = (): void => {
-    mittBus.emit('openChat')
   }
 </script>
 
