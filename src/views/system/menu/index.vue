@@ -54,22 +54,26 @@
           </ElCol>
 
           <ElCol :span="12">
-            <ElFormItem label="父级菜单">
+            <ElFormItem label="父级菜单" prop="parent_id">
               <ElTreeSelect
                 v-model="form.parent_id"
                 check-strictly
                 clearable
                 :data="parentOptions"
                 :props="{ label: 'title', value: 'id', children: 'children' }"
-                placeholder="顶级菜单"
+                :placeholder="parentPlaceholder"
                 value-key="id"
               />
             </ElFormItem>
           </ElCol>
 
+          <ElCol :span="24">
+            <ElAlert :closable="false" :title="typeTip" class="mb-4" show-icon type="info" />
+          </ElCol>
+
           <ElCol :span="12">
             <ElFormItem label="标题" prop="title">
-              <ElInput v-model="form.title" placeholder="如 用户管理" />
+              <ElInput v-model="form.title" :placeholder="titlePlaceholder" />
             </ElFormItem>
           </ElCol>
 
@@ -84,55 +88,55 @@
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="12">
-            <ElFormItem label="路由名称">
+          <ElCol v-if="isMenu" :span="12">
+            <ElFormItem label="路由名称" prop="name">
               <ElInput v-model="form.name" placeholder="如 User" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="12">
-            <ElFormItem label="路由路径">
-              <ElInput v-model="form.path" placeholder="如 /system 或 user" />
+          <ElCol v-if="isDirectory || isMenu" :span="12">
+            <ElFormItem label="路由路径" prop="path">
+              <ElInput v-model="form.path" :placeholder="pathPlaceholder" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="12">
-            <ElFormItem label="组件路径">
+          <ElCol v-if="isMenu && form.is_external === 0" :span="12">
+            <ElFormItem label="组件路径" prop="component">
               <ElInput v-model="form.component" placeholder="如 /system/user" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="12">
+          <ElCol v-if="isDirectory || isMenu" :span="12">
             <ElFormItem label="图标">
               <ElInput v-model="form.icon" placeholder="如 ri:user-line" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="12">
-            <ElFormItem label="权限标识">
-              <ElInput v-model="form.permission" placeholder="如 user.view" />
+          <ElCol v-if="isMenu || isButton" :span="12">
+            <ElFormItem label="权限标识" prop="permission">
+              <ElInput v-model="form.permission" :placeholder="permissionPlaceholder" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="12">
-            <ElFormItem label="外链地址">
+          <ElCol v-if="isMenu && form.is_external === 1" :span="12">
+            <ElFormItem label="外链地址" prop="external_url">
               <ElInput v-model="form.external_url" placeholder="https://..." />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="8">
+          <ElCol v-if="isDirectory || isMenu" :span="8">
             <ElFormItem label="显示">
               <ElSwitch v-model="form.visible" :active-value="1" :inactive-value="0" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="8">
+          <ElCol v-if="isMenu" :span="8">
             <ElFormItem label="缓存">
               <ElSwitch v-model="form.keep_alive" :active-value="1" :inactive-value="0" />
             </ElFormItem>
           </ElCol>
 
-          <ElCol :span="8">
+          <ElCol v-if="isMenu" :span="8">
             <ElFormItem label="外链">
               <ElSwitch v-model="form.is_external" :active-value="1" :inactive-value="0" />
             </ElFormItem>
@@ -225,9 +229,64 @@
     remark: ''
   })
 
+  const isDirectory = computed(() => form.type === 1)
+  const isMenu = computed(() => form.type === 2)
+  const isButton = computed(() => form.type === 3)
+
+  const typeTip = computed(() => {
+    if (isDirectory.value) {
+      return '目录只用于左侧菜单分组，通常填写标题、路由路径和图标，不需要组件路径和权限标识。'
+    }
+
+    if (isMenu.value) {
+      return '菜单是可以点击打开的页面，需要填写路由路径、组件路径和权限标识；如果是外链菜单，则填写外链地址。'
+    }
+
+    return '按钮是页面内的操作权限，比如新增、修改、删除；必须挂在某个菜单下面，并填写权限标识。'
+  })
+
+  const parentPlaceholder = computed(() => (isButton.value ? '请选择所属菜单' : '顶级菜单'))
+  const titlePlaceholder = computed(() => {
+    if (isDirectory.value) return '如 系统管理'
+    if (isMenu.value) return '如 用户管理'
+    return '如 新增用户'
+  })
+  const pathPlaceholder = computed(() => (isDirectory.value ? '如 /system' : '如 /system/user'))
+  const permissionPlaceholder = computed(() => (isButton.value ? '如 user.create' : '如 user.view'))
+
+  const requiredWhen = (condition: () => boolean, message: string) => ({
+    validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+      if (!condition() || String(value || '').trim()) {
+        callback()
+        return
+      }
+
+      callback(new Error(message))
+    },
+    trigger: 'blur'
+  })
+
   const rules: FormRules<MenuForm> = {
     title: [{ required: true, message: '请输入菜单标题', trigger: 'blur' }],
     type: [{ required: true, message: '请选择菜单类型', trigger: 'change' }],
+    parent_id: [
+      {
+        validator: (_rule: unknown, value: number, callback: (error?: Error) => void) => {
+          if (!isButton.value || Number(value) > 0) {
+            callback()
+            return
+          }
+
+          callback(new Error('按钮必须选择所属菜单'))
+        },
+        trigger: 'change'
+      }
+    ],
+    name: [requiredWhen(() => isMenu.value, '请输入路由名称')],
+    path: [requiredWhen(() => isDirectory.value || isMenu.value, '请输入路由路径')],
+    component: [requiredWhen(() => isMenu.value && form.is_external === 0, '请输入组件路径')],
+    permission: [requiredWhen(() => isMenu.value || isButton.value, '请输入权限标识')],
+    external_url: [requiredWhen(() => isMenu.value && form.is_external === 1, '请输入外链地址')],
     sort: [{ required: true, message: '请输入排序', trigger: 'blur' }]
   }
 
@@ -303,6 +362,20 @@
     loadMenus()
   })
 
+  watch(
+    () => form.type,
+    () => {
+      formRef.value?.clearValidate()
+    }
+  )
+
+  watch(
+    () => form.is_external,
+    () => {
+      formRef.value?.clearValidate(['component', 'external_url'])
+    }
+  )
+
   const loadMenus = async () => {
     try {
       loading.value = true
@@ -372,23 +445,7 @@
   const handleSubmit = async () => {
     await formRef.value?.validate()
 
-    const params: MenuSaveParams = {
-      id: form.id,
-      parent_id: form.parent_id || 0,
-      type: form.type,
-      title: form.title,
-      name: form.name || undefined,
-      path: form.path || undefined,
-      component: form.component || undefined,
-      icon: form.icon || undefined,
-      permission: form.permission || undefined,
-      sort: form.sort,
-      visible: form.visible,
-      keep_alive: form.keep_alive,
-      is_external: form.is_external,
-      external_url: form.external_url || undefined,
-      remark: form.remark || undefined
-    }
+    const params = buildSubmitParams()
 
     try {
       submitLoading.value = true
@@ -402,6 +459,60 @@
       await loadMenus()
     } finally {
       submitLoading.value = false
+    }
+  }
+
+  const buildSubmitParams = (): MenuSaveParams => {
+    const cleanString = (value: string) => value.trim() || undefined
+    const baseParams: MenuSaveParams = {
+      id: form.id,
+      parent_id: form.parent_id || 0,
+      type: form.type,
+      title: form.title.trim(),
+      sort: form.sort,
+      visible: form.visible,
+      keep_alive: form.keep_alive,
+      is_external: form.is_external,
+      remark: cleanString(form.remark)
+    }
+
+    if (isDirectory.value) {
+      return {
+        ...baseParams,
+        name: undefined,
+        path: cleanString(form.path),
+        component: undefined,
+        icon: cleanString(form.icon),
+        permission: undefined,
+        keep_alive: 0,
+        is_external: 0,
+        external_url: undefined
+      }
+    }
+
+    if (isButton.value) {
+      return {
+        ...baseParams,
+        name: undefined,
+        path: undefined,
+        component: undefined,
+        icon: undefined,
+        permission: cleanString(form.permission),
+        visible: 0,
+        keep_alive: 0,
+        is_external: 0,
+        external_url: undefined
+      }
+    }
+
+    return {
+      ...baseParams,
+      name: cleanString(form.name),
+      path: cleanString(form.path),
+      component: form.is_external === 1 ? undefined : cleanString(form.component),
+      icon: cleanString(form.icon),
+      permission: cleanString(form.permission),
+      external_url: form.is_external === 1 ? cleanString(form.external_url) : undefined
     }
   }
 
