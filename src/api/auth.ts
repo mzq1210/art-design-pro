@@ -25,7 +25,8 @@ export async function fetchLogin(params: Api.Auth.LoginParams) {
 
   return {
     token: res.access_token,
-    refreshToken: res.refresh_token
+    refreshToken: res.refresh_token,
+    user: res.user
   }
 }
 

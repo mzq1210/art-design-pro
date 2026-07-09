@@ -30,6 +30,7 @@
  * @author Art Design Pro Team
  */
 
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/modules/user'
@@ -45,8 +46,8 @@ export const useAuth = () => {
   const { isFrontendMode } = useAppMode()
   const { info } = storeToRefs(userStore)
 
-  // 前端按钮权限（例如：['add', 'edit']）
-  const frontendAuthList = info.value?.buttons ?? []
+  // 后端返回的按钮权限（例如：['user.create', 'fulfillment.create']）
+  const userButtonAuthList = computed(() => info.value?.buttons ?? [])
 
   // 后端路由 meta 配置的权限列表（例如：[{ authMark: 'add' }]）
   const backendAuthList: AuthItem[] = Array.isArray(route.meta.authList)
@@ -59,12 +60,14 @@ export const useAuth = () => {
    * @returns 是否有权限
    */
   const hasAuth = (auth: string): boolean => {
-    // 前端模式
-    if (isFrontendMode.value) {
-      return frontendAuthList.includes(auth)
+    if (userButtonAuthList.value.includes(auth)) {
+      return true
     }
 
-    // 后端模式
+    if (isFrontendMode.value) {
+      return backendAuthList.some((item) => item?.authMark === auth)
+    }
+
     return backendAuthList.some((item) => item?.authMark === auth)
   }
 

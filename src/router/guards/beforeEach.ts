@@ -211,11 +211,11 @@ function handleLoginStatus(
     return true
   }
 
-  // 未登录且访问需要权限的页面，跳转到登录页并携带 redirect 参数
+  // 未登录且访问需要权限的页面，固定跳转登录页；登录后默认进入工作台
   userStore.logOut()
   next({
     name: 'Login',
-    query: { redirect: to.fullPath }
+    replace: true
   })
   return false
 }

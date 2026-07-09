@@ -101,7 +101,7 @@ export function deleteDictItem(params: { id: number }) {
 
 export function fetchDictOptions(params: { code: string }) {
   return request.post<{ records: DictItem[] }>({
-    url: '/dict/options',
+    url: '/dict/select-options',
     params
   })
 }

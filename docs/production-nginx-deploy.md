@@ -1,41 +1,30 @@
-# 生产环境 Nginx 部署文档
+# 生产环境 Nginx 部署
 
-本文档用于当前项目的生产部署：
+本文档记录当前 Vue 前端 + Yii2 API 后端的推荐生产部署方式。域名、证书、PHP-FPM 路径和项目目录需要按真实服务器调整。
 
-- 前端：`art-design-pro`，Vue 3 + Vite，构建后产物在 `dist/`
-- 后端：`art-design-pro-admin`，Yii2 Advanced API，入口为 `api/web/index.php`
-- API 域名示例：`api.artdesign.com`
-- 前端域名示例：`admin.artdesign.com`
-
-以下域名、证书路径、PHP-FPM 版本和项目目录都需要按真实服务器调整。
-
-## 一、推荐部署结构
+## 推荐结构
 
 ```text
 /www/wwwroot/art-design-pro
-├─ dist/                         # 前端 pnpm build 后上传
+└─ dist/                         前端构建产物
 
 /www/wwwroot/art-design-pro-admin
-├─ api/web/index.php             # Yii2 API 入口
-├─ api/web/uploads/              # 上传文件公开访问目录
-├─ common/config/main-local.php  # 生产数据库、Redis 等本地配置
+├─ api/web/index.php             Yii2 API 入口
+├─ api/web/uploads/              上传文件
+├─ common/config/main-local.php  生产数据库、Redis、JWT 配置
 ├─ console/
 ├─ vendor/
 └─ yii
 ```
 
-前端和后端建议使用两个域名：
+推荐两个域名：
 
 ```text
-admin.artdesign.com  -> 前端 dist
-api.artdesign.com    -> Yii2 API
+admin.artdesign.com  前端
+api.artdesign.com    后端 API
 ```
 
-这样最清晰，也方便分别设置静态缓存、PHP-FPM、上传大小和日志。
-
-## 二、前端构建
-
-在本地或服务器执行：
+## 构建前端
 
 ```bash
 cd /www/wwwroot/art-design-pro
@@ -43,22 +32,16 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-构建完成后生成：
-
-```text
-dist/
-```
-
-生产环境 `.env.production` 建议配置为正式 API：
+生产环境变量示例：
 
 ```env
 VITE_API_URL = https://api.artdesign.com
 VITE_ACCESS_MODE = backend
 ```
 
-如果改了 env，必须重新构建。
+如果改了 `.env.production`，必须重新执行 `pnpm build`。
 
-## 三、后端准备
+## 准备后端
 
 ```bash
 cd /www/wwwroot/art-design-pro-admin
@@ -69,23 +52,19 @@ php yii menu-seed
 php yii permission-sync admin
 ```
 
-生产环境要确认：
+确认：
 
-- `common/config/main-local.php` 数据库连接正确
-- Redis 可连接
-- JWT 密钥已配置
+- `common/config/main-local.php` 数据库、Redis、JWT 配置正确
 - `api/runtime`、`console/runtime`、`api/web/assets`、`api/web/uploads` 可写
-- PHP 扩展满足 Yii2 和项目依赖，例如 `pdo_mysql`、`mbstring`、`openssl`、`fileinfo`、`redis`
+- PHP 扩展包含 `pdo_mysql`、`mbstring`、`openssl`、`fileinfo`、`redis`
+- 生产环境不要暴露 Yii2 项目根目录，只暴露 `api/web`
 
-## 四、前端 Nginx 配置
-
-前端是静态文件。由于 Vue Router 使用 hash 模式，目前刷新压力较小，但仍建议保留 `try_files`。
+## 前端 Nginx
 
 ```nginx
 server {
     listen 80;
     server_name admin.artdesign.com;
-
     return 301 https://$host$request_uri;
 }
 
@@ -99,9 +78,6 @@ server {
     root /www/wwwroot/art-design-pro/dist;
     index index.html;
 
-    access_log /var/log/nginx/admin.artdesign.access.log;
-    error_log  /var/log/nginx/admin.artdesign.error.log;
-
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -114,15 +90,12 @@ server {
 }
 ```
 
-## 五、后端 API Nginx 配置
-
-Yii2 API 入口目录必须指向 `api/web`，不要把整个项目暴露为 Web 根目录。
+## 后端 API Nginx
 
 ```nginx
 server {
     listen 80;
     server_name api.artdesign.com;
-
     return 301 https://$host$request_uri;
 }
 
@@ -135,11 +108,7 @@ server {
 
     root /www/wwwroot/art-design-pro-admin/api/web;
     index index.php;
-
     client_max_body_size 50m;
-
-    access_log /var/log/nginx/api.artdesign.access.log;
-    error_log  /var/log/nginx/api.artdesign.error.log;
 
     location / {
         try_files $uri $uri/ /index.php$is_args$args;
@@ -169,24 +138,26 @@ server {
 }
 ```
 
-如果你的 PHP-FPM 是 TCP 方式，替换为：
+如果 PHP-FPM 使用 TCP：
 
 ```nginx
 fastcgi_pass 127.0.0.1:9000;
 ```
 
-## 六、跨域说明
+## 跨域方案
 
-开发环境用 Vite `server.proxy` 只是为了本地调试方便。
+开发环境使用 Vite `server.proxy` 解决本地跨域。
 
-生产环境有两种方式：
+生产环境推荐二选一：
 
-1. 前端直接请求 `https://api.artdesign.com`
-2. 前端同域 `/api` 反向代理到 Yii2 API
+```text
+方案 A：前端直接请求 https://api.artdesign.com
+方案 B：前端请求同域 /api，由 Nginx 反向代理到 API
+```
 
-目前项目按第一种方式更直接。后端需要允许正式前端域名跨域，建议在 Yii2 CORS 配置中限制来源，不要长期使用全开放。
+方案 A 需要后端 CORS 允许正式前端域名。
 
-同域反向代理示例：
+方案 B 示例：
 
 ```nginx
 location /api/ {
@@ -198,15 +169,13 @@ location /api/ {
 }
 ```
 
-使用这个方式时，前端生产 API 可以配置为：
+使用方案 B 时：
 
 ```env
 VITE_API_URL = /api
 ```
 
-## 七、队列 Worker 部署
-
-队列示例使用 `yii2-queue` 的 Redis driver。接口只负责把任务推入队列，真正执行任务必须启动 worker。
+## 队列 Worker
 
 临时启动：
 
@@ -215,7 +184,7 @@ cd /www/wwwroot/art-design-pro-admin
 php yii queue/listen
 ```
 
-生产环境建议使用 Supervisor：
+生产建议使用 Supervisor：
 
 ```ini
 [program:artdesign-queue]
@@ -239,22 +208,16 @@ supervisorctl start artdesign-queue:*
 supervisorctl status
 ```
 
-## 八、上线检查清单
+## 上线检查
 
 - 前端 `pnpm build` 成功
 - 后端 `composer install --no-dev --optimize-autoloader` 成功
-- `php yii migrate --interactive=0` 已执行
-- `php yii menu-seed` 已执行
-- `php yii permission-sync admin` 已执行
+- 数据库迁移已执行
+- 菜单和权限初始化已执行
 - Nginx `root` 指向正确目录
 - PHP-FPM socket 或端口正确
-- `client_max_body_size` 大于系统允许上传大小
+- 上传目录可写
 - Redis 正常
 - 队列 worker 正常
-- 上传目录可写
-- 后台重新登录，刷新 `/user/menus` 和按钮权限
-
-## 九、参考
-
-- NGINX 官方文档：静态文件服务和 `try_files`
-- NGINX 官方文档：`client_max_body_size`
+- 正式 API 域名和 CORS 配置正确
+- 后台重新登录，确认菜单和按钮权限正常

@@ -33,11 +33,19 @@
  */
 
 import { router } from '@/router'
+import { useUserStore } from '@/store/modules/user'
 import { App, Directive, DirectiveBinding } from 'vue'
 
 export type AuthDirective = Directive<HTMLElement, string>
 
 function checkAuthPermission(el: HTMLElement, binding: DirectiveBinding<string>): void {
+  const userStore = useUserStore()
+  const buttonAuthList = userStore.info?.buttons ?? []
+
+  if (buttonAuthList.includes(binding.value)) {
+    return
+  }
+
   // 获取当前路由的权限列表
   const authList = (router.currentRoute.value.meta.authList as Array<{ authMark: string }>) || []
 

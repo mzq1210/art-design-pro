@@ -233,7 +233,7 @@
   })
 
   const fileForm = reactive({
-    group_id: 0,
+    group_id: '' as number | '',
     remark: ''
   })
 
@@ -337,7 +337,7 @@
 
   const openFileDialog = (file: FileAttachmentItem) => {
     currentFile.value = file
-    fileForm.group_id = file.group_id
+    fileForm.group_id = file.group_id || ''
     fileForm.remark = file.remark || ''
     fileDialogVisible.value = true
   }

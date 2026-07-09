@@ -31,6 +31,18 @@ export const staticRoutes: AppRouteRecordRaw[] = [
     meta: { title: '403', isHideTab: true }
   },
   {
+    path: '/customer/detail',
+    name: 'CustomerDetail',
+    component: () => import('@views/customer/detail/index.vue'),
+    meta: { title: '客户详情' }
+  },
+  {
+    path: '/contract/detail',
+    name: 'ContractDetail',
+    component: () => import('@views/contract/detail/index.vue'),
+    meta: { title: '合同详情' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'Exception404',
     component: () => import('@views/exception/404/index.vue'),

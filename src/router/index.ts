@@ -1,5 +1,5 @@
 import type { App } from 'vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import { staticRoutes } from './routes/staticRoutes'
 import { configureNProgress } from '@/utils/router'
 import { setupBeforeEachGuard } from './guards/beforeEach'
@@ -7,7 +7,7 @@ import { setupAfterEachGuard } from './guards/afterEach'
 
 // 创建路由实例
 export const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(import.meta.env.VITE_BASE_URL),
   routes: staticRoutes // 静态路由
 })
 
@@ -20,4 +20,4 @@ export function initRouter(app: App<Element>): void {
 }
 
 // 主页路径，默认使用菜单第一个有效路径，配置后使用此路径
-export const HOME_PAGE_PATH = ''
+export const HOME_PAGE_PATH = '/dashboard/console'
